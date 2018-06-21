@@ -28,21 +28,23 @@ std::vector< vector<int> > ReadMatches(const char *filename)
 
 int main(int argc, char** argv)
 {
-	if (argc < 4){
+	/*if (argc < 4){
 		printf("USAGE: CPM image1 image2 inMatchText\n");
 		return -1;
-	}
+	}*/
 
 	cv::Mat img1, img2, img3;
 
-	img1 = cv::imread(argv[1], CV_LOAD_IMAGE_UNCHANGED);
-	img2 = cv::imread(argv[2], CV_LOAD_IMAGE_UNCHANGED);
+	img1 = cv::imread("../imgs/fixed_cloud_color.png", CV_LOAD_IMAGE_UNCHANGED);
+	img2 = cv::imread("../imgs/moving_cloud_color.png", CV_LOAD_IMAGE_UNCHANGED);
 
 	//cv::cvtColor(img1, img1, CV_GRAY2RGB);
 	//cv::cvtColor(img2, img2, CV_GRAY2RGB);
 
-    std::cout << "Reading Input Text File: " << argv[3] << "\n";
-    std::vector< vector<int> > optical_flow = ReadMatches(argv[3]);
+    std::cout << "Reading Input Text File: " << "../imgs/output_rgb" << "\n";
+    std::vector< vector<int> > optical_flow = ReadMatches("../imgs/output_rgb");
+
+	std::cout << "matches size: " << optical_flow.size() << "\n";
 
     /*for(unsigned int iter = 0; iter < optical_flow.size(); ++iter)
         std::cout << optical_flow[iter][0] << " " << optical_flow[iter][1] << " " <<
@@ -53,39 +55,13 @@ int main(int argc, char** argv)
     img2.copyTo( drawImg( cv::Rect(1000, 0, 1000, 1000) )  );
 
     for( unsigned int iter = 0; iter < optical_flow.size(); ++iter ) {
-
-        if( optical_flow[iter][0] > 100 & optical_flow[iter][0] < 900 && (optical_flow[iter][0] % 30) == 0 ) {
+        if( !(optical_flow[iter][0] % 10) && !(optical_flow[iter][1] % 10) ) 
             cv::line( drawImg, cv::Point(optical_flow[iter][0], optical_flow[iter][1]), cv::Point(optical_flow[iter][2]+1000, optical_flow[iter][3]), cv::Scalar(0, 255, 0));
-        }
+        
     }
 
     cv::imshow("optical_flow", drawImg);
     cv::waitKey(0);
-
-	/*int w = img1.width();
-	int h = img1.height();
-	if (img2.width() != w || img2.height() != h){
-		printf("CPM can only handle images with the same dimension!\n");
-		return -1;
-	}
-
-	CTimer totalT;
-	FImage matches;
-
-	CPM cpm;
-	cpm.SetStep(step);
-	cpm.Matching(img1, img2, matches);
-
-	totalT.toc("total time: ");
-
-	FImage u, v;
-	char tmpName[256];
-	strcpy(tmpName, outMatName);
-	strcat(tmpName, ".png");
-	Match2Flow(matches, u, v, w, h);
-	OpticFlowIO::SaveFlowAsImage(tmpName, u.pData, v.pData, w, h);
-
-	WriteMatches(outMatName, matches);*/
 
 	return 0;
 }
