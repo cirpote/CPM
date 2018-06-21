@@ -3,6 +3,7 @@
 #include <eigen3/Eigen/Geometry>
 
 using namespace Eigen;
+using namespace cv;
 
 std::vector< vector<int> > ReadMatches(const char *filename)
 {
@@ -36,10 +37,13 @@ int main(int argc, char** argv)
 		return -1;
 	}*/
 
-	cv::Mat img1, img2, img3;
+	cv::Mat img1, img2, img1_xyz, img2_xyz;
 
 	img1 = cv::imread("../imgs/fixed_cloud_color.png", CV_LOAD_IMAGE_UNCHANGED);
 	img2 = cv::imread("../imgs/moving_cloud_color.png", CV_LOAD_IMAGE_UNCHANGED);
+
+	img1_xyz = cv::imread("../imgs/fixed_cloud_X.png", CV_LOAD_IMAGE_UNCHANGED);
+	//img2_xyz = cv::imread("../imgs/moving_cloud_XYZ.png", CV_LOAD_IMAGE_UNCHANGED);
 
 	//cv::cvtColor(img1, img1, CV_GRAY2RGB);
 	//cv::cvtColor(img2, img2, CV_GRAY2RGB);
@@ -107,12 +111,36 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::vector< vector<int> > validFlow;
 	for( unsigned int iter = 0; iter < optical_flow.size(); ++iter ) {
-        if( !(optical_flow[iter][0] % 1) && !(optical_flow[iter][1] % 1) && _isValid[iter] ) 
+        if( !(optical_flow[iter][0] % 1) && !(optical_flow[iter][1] % 1) && _isValid[iter] ){ 
     	    cv::line( drawImg, cv::Point(optical_flow[iter][0], optical_flow[iter][1]), cv::Point(optical_flow[iter][2]+1000, optical_flow[iter][3]), cv::Scalar(0, 255, 0));
-        
+			validFlow.push_back(optical_flow[iter]);
+		}
     }
 
+	
+	/*Mat warp_mat( 2, 3, CV_32FC1 );
+  	Point2f srcTri[validFlow.size()];
+  	Point2f dstTri[validFlow.size()];
+
+	for( unsigned int iter = 0; iter < validFlow.size(); ++iter ) {
+		srcTri[iter] = Point2f(validFlow[iter][0], validFlow[iter][1]);
+		dstTri[iter] = Point2f(validFlow[iter][2], validFlow[iter][3]);
+	}
+
+	warp_mat = getAffineTransform( srcTri, dstTri );
+	std::cout << warp_mat << "\n" << "\n";*/
+
+
+	std::cout << img1_xyz.type() << "\n";
+
+	cv::Mat m2(img1_xyz.rows, img1_xyz.cols, CV_32FC1, img1_xyz.data);
+	std::cout << m2.at<float>(0,0) << " "
+			  << m2.at<float>(0,1) << " "
+			  << m2.at<float>(0,2) << " "
+			  << m2.at<float>(0,3) << " "
+			  << m2.at<float>(0,4) << "\n";
 
     cv::imshow("optical_flow", drawImg);
     cv::waitKey(0);
