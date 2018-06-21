@@ -1,5 +1,8 @@
 #include "CPM.h"
 #include "OpticFlowIO.h"
+#include <eigen3/Eigen/Geometry>
+
+using namespace Eigen;
 
 std::vector< vector<int> > ReadMatches(const char *filename)
 {
@@ -46,19 +49,70 @@ int main(int argc, char** argv)
 
 	std::cout << "matches size: " << optical_flow.size() << "\n";
 
-    /*for(unsigned int iter = 0; iter < optical_flow.size(); ++iter)
-        std::cout << optical_flow[iter][0] << " " << optical_flow[iter][1] << " " <<
-                     optical_flow[iter][2] << " " << optical_flow[iter][3] << "\n";*/
-
     cv::Mat drawImg( cv::Size(2000,1000), CV_8UC3, cv::Scalar(0,0,0) );
     img1.copyTo( drawImg( cv::Rect(0, 0, 1000, 1000) )  );
     img2.copyTo( drawImg( cv::Rect(1000, 0, 1000, 1000) )  );
 
-    for( unsigned int iter = 0; iter < optical_flow.size(); ++iter ) {
-        if( !(optical_flow[iter][0] % 10) && !(optical_flow[iter][1] % 10) ) 
-            cv::line( drawImg, cv::Point(optical_flow[iter][0], optical_flow[iter][1]), cv::Point(optical_flow[iter][2]+1000, optical_flow[iter][3]), cv::Scalar(0, 255, 0));
+
+	std::vector<Vector3f> voting_vector;
+	float u1 = optical_flow[0][0];
+	float v1 = optical_flow[0][1];
+	float u2 = optical_flow[0][2];
+	float v2 = optical_flow[0][3];
+	voting_vector.push_back( Vector3f( u2-u1, v2-v1, 1 ) );
+
+	for( unsigned int i = 1; i < optical_flow.size(); ++i ) {
+
+		u1 = optical_flow[i][0];
+		v1 = optical_flow[i][1];
+		u2 = optical_flow[i][2];
+		v2 = optical_flow[i][3];
+		Vector3f currFlow(u2-u1, v2-v1, 1);
+
+		int size = voting_vector.size();
+		for(unsigned int ii = 0; ii < size; ++ii){
+
+			if( ( currFlow.head(2) - voting_vector[ii].head(2) ).norm() < 15){
+				voting_vector[ii](2) += 1;
+				break;
+			} else {
+				voting_vector.push_back(currFlow);
+				break;
+			}
+
+		}
+	}
+
+	float max = 0;
+	int max_index;
+
+	for(unsigned int i = 0; i <  voting_vector.size(); ++i){
+		if( voting_vector[i](2) > max ){
+			max = voting_vector[i](2);
+			max_index = i;
+		}
+	}
+
+	bool _isValid[optical_flow.size()];
+	for( unsigned int i = 1; i < optical_flow.size(); ++i ) {
+		u1 = optical_flow[i][0];
+		v1 = optical_flow[i][1];
+		u2 = optical_flow[i][2];
+		v2 = optical_flow[i][3];
+		Vector3f currFlow(u2-u1, v2-v1, 1);
+		if( ( currFlow.head(2) - voting_vector[max_index].head(2) ).norm() < 15){
+			_isValid[i] = true;
+		} else {
+			_isValid[i] = false;
+		}
+	}
+
+	for( unsigned int iter = 0; iter < optical_flow.size(); ++iter ) {
+        if( !(optical_flow[iter][0] % 1) && !(optical_flow[iter][1] % 1) && _isValid[iter] ) 
+    	    cv::line( drawImg, cv::Point(optical_flow[iter][0], optical_flow[iter][1]), cv::Point(optical_flow[iter][2]+1000, optical_flow[iter][3]), cv::Scalar(0, 255, 0));
         
     }
+
 
     cv::imshow("optical_flow", drawImg);
     cv::waitKey(0);

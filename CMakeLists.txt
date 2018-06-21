@@ -23,4 +23,4 @@ add_executable(${PROJ_NAME} main.cpp CPM.cpp)
 target_link_libraries(${PROJ_NAME} ${OpenCV_LIBS} )
 
 add_executable(${PROJ_NAME}_plot plot.cpp CPM.cpp)
-target_link_libraries(${PROJ_NAME}_plot ${OpenCV_LIBS})
+target_link_libraries(${PROJ_NAME}_plot ${OpenCV_LIBS} ${EIGEN3_LIBS})
