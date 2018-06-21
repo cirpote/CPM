@@ -4,38 +4,23 @@ PROJECT (${PROJ_NAME})
 
 ADD_DEFINITIONS(-DWITH_SSE)
 
-IF(MSVC)
-INCLUDE_DIRECTORIES(
-./
-./include
-C:/OpenCV/include
-C:/OpenCV/include/opencv
-C:/OpenCV/include/opencv2
+find_package( OpenCV REQUIRED )
+find_package( Eigen3 REQUIRED )
+
+if(NOT DEFINED EIGEN3_INCLUDE_DIR)
+  find_path(EIGEN3_INCLUDE_DIR eigen3)
+endif(NOT DEFINED EIGEN3_INCLUDE_DIR)
+
+include_directories(
+    include
+    cv_ext/include
+    ${EIGEN3_INCLUDE_DIR}
 )
 
-LINK_DIRECTORIES(
-C:/OpenCV/lib/x86/Debug
-C:/OpenCV/lib/x86/Release
-)
-ELSE(MSVC)
-FIND_PACKAGE(OpenCV REQUIRED)
-INCLUDE_DIRECTORIES(./include)
-ENDIF(MSVC)
+#add_subdirectory(cv_ext)
 
-ADD_EXECUTABLE(${PROJ_NAME} main.cpp CPM.cpp)
+add_executable(${PROJ_NAME} main.cpp CPM.cpp)
+target_link_libraries(${PROJ_NAME} ${OpenCV_LIBS} )
 
-IF(MSVC)
-TARGET_LINK_LIBRARIES(${PROJ_NAME}
-debug opencv_core310d.lib
-debug opencv_highgui310d.lib
-debug opencv_imgcodecs310d.lib
-debug opencv_imgproc310d.lib
-debug opencv_xfeatures2d310d.lib
-optimized opencv_core310.lib
-optimized opencv_highgui310.lib
-optimized opencv_imgcodecs310.lib
-optimized opencv_imgproc310.lib
-optimized opencv_xfeatures2d310.lib)
-ELSE(MSVC)
-TARGET_LINK_LIBRARIES(${PROJ_NAME} ${OpenCV_LIBS})
-ENDIF(MSVC)
+add_executable(${PROJ_NAME}_plot plot.cpp CPM.cpp)
+target_link_libraries(${PROJ_NAME}_plot ${OpenCV_LIBS})

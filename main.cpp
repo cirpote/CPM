@@ -55,8 +55,23 @@ int main(int argc, char** argv)
 
 	FImage img1, img2;
 
+	/*cv::Mat img1_ = cv::imread(argv[1], CV_LOAD_IMAGE_COLOR);
+	cv::Mat img1_bgr[3];   //destination array
+	cv::split(img1_,img1_bgr);
+	imwrite("/home/bellisario/CPM/imgs/fixed.png", img1_bgr[0]);
+
+	cv::Mat img2_ = cv::imread(argv[2], CV_LOAD_IMAGE_COLOR);
+	cv::Mat img2_bgr[3];   //destination array
+	cv::split(img2_,img2_bgr);
+	imwrite("/home/bellisario/CPM/imgs/moving.png", img2_bgr[0]);
+
+	
+	img1.imread("/home/bellisario/CPM/imgs/fixed.png");
+	img2.imread("/home/bellisario/CPM/imgs/moving.png");*/
+
 	img1.imread(argv[1]);
 	img2.imread(argv[2]);
+
 	char* outMatName = argv[3];
 	int step = 3;
 	if (argc >= 5){

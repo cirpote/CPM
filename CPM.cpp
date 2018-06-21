@@ -197,9 +197,7 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg)
 	int h = imgray.height();
 
 	// use the version in OpenCV
-	cv::Ptr<cv::xfeatures2d::DAISY> daisy =
-		cv::xfeatures2d::DAISY::create(5, 3, 4, 8, 
-		cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
+	cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
 	cv::Mat cvImg(h, w, CV_8UC1);
 	for (int i = 0; i < h; i++){
 		for (int j = 0; j < w; j++){
@@ -207,7 +205,7 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg)
 		}
 	}
 	cv::Mat outFeatures;
-	daisy->compute(cvImg, outFeatures);
+	daisy->compute(cvImg, outFeatures);  // outFeatures are the descriptors
 
 	int itSize = outFeatures.cols;
 	outFtImg.allocate(w, h, itSize);
@@ -574,7 +572,7 @@ CPM::Point CPM::circumcenter(Point a, Point b, Point c)
 	Point ua, ub, va, vb;
 	ua.x = (a.x + b.x) / 2;
 	ua.y = (a.y + b.y) / 2;
-	ub.x = ua.x - a.y + b.y;//¸ù¾Ý ´¹Ö±ÅÐ¶Ï£¬Á½Ïß¶Îµã»ýÎª0 
+	ub.x = ua.x - a.y + b.y;//ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ö±ï¿½Ð¶Ï£ï¿½ï¿½ï¿½ï¿½ß¶Îµï¿½ï¿½Îª0 
 	ub.y = ua.y + a.x - b.x;
 	va.x = (a.x + c.x) / 2;
 	va.y = (a.y + c.y) / 2;
@@ -601,14 +599,14 @@ float CPM::MinimalCircle(float* x, float*y, int n, float* centerX, float* center
 	int i, j, k;
 	o = p[0];
 	r = 0;
-	for (i = 1; i < n; i++)//×¼±¸¼ÓÈëµÄµã 
+	for (i = 1; i < n; i++)//×¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ 
 	{
-		if (dist(p[i], o) - r > eps)//Èç¹ûµÚiµãÔÚ i-1Ç°×îÐ¡Ô²ÍâÃæ 
+		if (dist(p[i], o) - r > eps)//ï¿½ï¿½ï¿½ï¿½ï¿½iï¿½ï¿½ï¿½ï¿½ i-1Ç°ï¿½ï¿½Ð¡Ô²ï¿½ï¿½ï¿½ï¿½ 
 		{
-			o = p[i];//Áí¶¨Ô²ÐÄ 
-			r = 0;//Áí¶¨°ë¾¶ 
+			o = p[i];//ï¿½ï¿½Ô²ï¿½ï¿½ 
+			r = 0;//ï¿½ï¿½ï¿½ë¾¶ 
 
-			for (j = 0; j < i; j++)//Ñ­»·ÔÙÈ·¶¨°ë¾¶ 
+			for (j = 0; j < i; j++)//Ñ­ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ë¾¶ 
 			{
 				if (dist(p[j], o) - r > eps)
 				{
@@ -619,12 +617,12 @@ float CPM::MinimalCircle(float* x, float*y, int n, float* centerX, float* center
 
 					for (k = 0; k < j; k++)
 					{
-						if (dist(o, p[k]) - r > eps)//Èç¹ûjÇ°ÃæÓÐµã²»·ûºÍ iÓëjÈ·¶¨µÄÔ²£¬Ôò¸üÐÂ 
+						if (dist(o, p[k]) - r > eps)//ï¿½ï¿½ï¿½jÇ°ï¿½ï¿½ï¿½Ðµã²»ï¿½ï¿½ï¿½ï¿½ iï¿½ï¿½jÈ·ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 
 						{
 							o = circumcenter(p[i], p[j], p[k]);
 							r = dist(o, p[k]);
 						}
-					}//Ñ­»·²»³¬¹ý3²ã£¬ÒòÎªÒ»¸öÔ²×î¶à3¸öµã¿ÉÒÔÈ·¶¨ 
+					}//Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½3ï¿½ã£¬ï¿½ï¿½ÎªÒ»ï¿½ï¿½Ô²ï¿½ï¿½ï¿½3ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ 
 				}
 			}
 		}
