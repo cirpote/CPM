@@ -2,6 +2,7 @@
 #include "ImageFeature.h"
 
 #include "opencv2/xfeatures2d.hpp" // for "DAISY" descriptor
+#include <eigen3/Eigen/Geometry>
 
 // [4/6/2017 Yinlin.Hu]
 
@@ -48,6 +49,66 @@ void CPM::SetStep(int step)
 {
 	_step = step;
 }
+
+void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches){
+
+    std::vector< Eigen::Vector3f > voting_vector;
+    voting_vector.push_back( Eigen::Vector3f(inpMatches[2]-inpMatches[0], inpMatches[3]-inpMatches[1], 1) );
+
+    int len = inpMatches.height();
+    for( unsigned int i = 1; i < len; ++i ) {
+
+		Eigen::Vector2f currFlow( inpMatches[4 * i + 2]-inpMatches[4 * i + 0],  
+                          inpMatches[4 * i + 3]-inpMatches[4 * i + 1] );
+		int voting_size = voting_vector.size(); int count = 0;
+		while(true){
+
+            if( count == voting_size ){
+                voting_vector.push_back( Eigen::Vector3f(currFlow(0), currFlow(1), 1) );
+                break;
+            }
+
+            if( ( currFlow - voting_vector[count].head(2) ).norm() < 4 ){
+                voting_vector[count](2) += 1;
+                break;
+            }
+			count++;
+		}
+	}
+
+    float max = 0; int max_index; int voting_size = voting_vector.size();
+	for(unsigned int i = 0; i <  voting_size; ++i){
+		if( voting_vector[i](2) > max ){
+			max = voting_vector[i](2);
+			max_index = i;
+		}
+	}
+
+	bool _isValid[len]; int counter = 0;
+	for( unsigned int i = 1; i < len; ++i ) {
+		Eigen::Vector2f currFlow(inpMatches[4 * i + 2]-inpMatches[4 * i + 0], 
+                         		 inpMatches[4 * i + 3]-inpMatches[4 * i + 1]);
+		if( ( currFlow - voting_vector[max_index].head(2) ).norm() < 20.f){
+			_isValid[i] = true;
+			counter++;
+		} else {
+			_isValid[i] = false;
+		}
+	}
+
+	outMatches = FImage(4, counter, 1); int inner_counter = 0;
+	for( unsigned int i = 1; i < len; ++i ) {
+		if(_isValid[i]){
+			outMatches[inner_counter*4 + 0] = inpMatches[i*4 + 0];
+			outMatches[inner_counter*4 + 1] = inpMatches[i*4 + 1];
+			outMatches[inner_counter*4 + 2] = inpMatches[i*4 + 2];
+			outMatches[inner_counter*4 + 3] = inpMatches[i*4 + 3];
+			inner_counter++;
+		}
+	}
+
+}
+
 
 int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
 {

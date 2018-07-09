@@ -35,6 +35,7 @@ public:
 	~CPM();
 
 	int Matching(FImage& img1, FImage& img2, FImage& outMatches);
+	void VotingScheme(FImage& inpMatches, FImage& outMatches);
 	void SetStereoFlag(int needStereo);
 	void SetStep(int step);
 
