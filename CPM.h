@@ -27,6 +27,7 @@ corresponding to one match per line.
 #define _CPM_H_
 
 #include "ImagePyramid.h"
+#include <eigen3/Eigen/Geometry>
 
 class CPM
 {
@@ -35,7 +36,9 @@ public:
 	~CPM();
 
 	int Matching(FImage& img1, FImage& img2, FImage& outMatches);
+    void VotingSchemeHough(FImage& inpMatches, FImage& outMatches);
 	void VotingScheme(FImage& inpMatches, FImage& outMatches);
+    void addFlowToAccumulator(const Eigen::Vector2f& pt, cv::Mat& acc);
 	void SetStereoFlag(int needStereo);
 	void SetStep(int step);
 

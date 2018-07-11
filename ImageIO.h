@@ -134,9 +134,9 @@ void ImageIO::showGrayImageAsColor(const char* winname, const unsigned char* pIm
 	// show range
 	char info[256];
 	if (IsFloat)
-		sprintf(info, "[%.3f, %.3f]", minV, maxV);
+        std::cout << "[" << minV << ", " << maxV << "]\n";
 	else
-		sprintf(info, "[%d, %d]", (int)minV, (int)maxV);
+        std::cout << "[" << (int)minV << ", " << (int)maxV << "]\n";
 	cv::putText(im, info, cvPoint(10, 20), CV_FONT_HERSHEY_SIMPLEX, 0.5, cvScalar(255, 255, 255));
 
 	//
