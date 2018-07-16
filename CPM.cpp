@@ -21,18 +21,24 @@ CPM::CPM()
     _checkThreshold = 3;
     _borderWidth = 5;
 
-    _im1f = NULL;
-    _im2f = NULL;
+    _im1_exg = NULL;
+    _im1_elev = NULL;
+    _im2_exg = NULL;
+    _im2_elev = NULL;
     _pydSeedsFlow = NULL;
     _pydSeedsFlow2 = NULL;
 }
 
 CPM::~CPM()
 {
-    if (_im1f)
-        delete[] _im1f;
-    if (_im2f)
-        delete[] _im2f;
+    if (_im1_exg)
+        delete[] _im1_exg;
+    if(_im1_elev)
+        delete[] _im1_elev;
+    if (_im2_exg)
+        delete[] _im2_exg;
+    if(_im2_elev)
+        delete[] _im2_elev;
     if (_pydSeedsFlow)
         delete[] _pydSeedsFlow;
     if (_pydSeedsFlow2)
@@ -208,20 +214,27 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
 
     int nLevels = _pyd1.nlevels();
 
-    if (_im1f)
-        delete[] _im1f;
-    if (_im2f)
-        delete[] _im2f;
+    std::exit(1);
+    if (_im1_exg)
+        delete[] _im1_exg;
+    if (_im1_elev)
+        delete[] _im1_elev;
+    if (_im2_exg)
+        delete[] _im2_exg;
+    if (_im2_elev)
+        delete[] _im2_elev;
 
-    _im1f = new UCImage[nLevels];
-    _im2f = new UCImage[nLevels];
+    _im1_exg = new UCImage[nLevels];
+    _im1_elev = new UCImage[nLevels];
+    _im2_exg = new UCImage[nLevels];
+    _im2_elev = new UCImage[nLevels];
     for (int i = 0; i < nLevels; i++){
-        imDaisy(_pyd1[i], _im1f[i]);
-        imDaisy(_pyd2[i], _im2f[i]);
+        imDaisy(_pyd1[i], _im1_exg[i]);
+        imDaisy(_pyd2[i], _im2_exg[i]);
         // 		ImageFeature::imSIFT(_pyd1[i], _im1f[i], 2, 1, true, 8);
         // 		ImageFeature::imSIFT(_pyd2[i], _im2f[i], 2, 1, true, 8);
     }
-    std::exit(1);
+    //std::exit(1);
     t.toc("get feature: ");
 
     int step = _step;
@@ -286,9 +299,9 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     //t.toc("generate seeds: ");
 
     t.tic();
-    OnePass(_pyd1, _pyd2, _im1f, _im2f, _seeds, _neighbors, _pydSeedsFlow);
+    OnePass(_pyd1, _pyd2, _im1_exg, _im2_exg, _seeds, _neighbors, _pydSeedsFlow);
     t.toc("forward matching: ");
-    OnePass(_pyd2, _pyd1, _im2f, _im1f, _seeds2, _neighbors2, _pydSeedsFlow2);
+    OnePass(_pyd2, _pyd1, _im2_exg, _im1_exg, _seeds2, _neighbors2, _pydSeedsFlow2);
     t.toc("backward matching: ");
 
     // cross check
@@ -338,6 +351,36 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
 
 void CPM::imDaisy(FImage& img, UCImage& outFtImg)
 {
+    // New Function
+    /*int w = imgray.width();
+    int h = imgray.height();
+    int channels = img.nchannels();
+
+    // use the version in OpenCV
+    cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
+    cv::Mat cvImg(h, w, CV_8UC2);
+    for (int i = 0; i < h; i++){
+        for (int j = 0; j < w; j++){
+            for( int k = 0; k < channels; k++){
+                cvImg.at<cv::Vec2b>(i, j)[k] = imgray[i*w + j + k] * 255;
+            }
+        }
+    }
+    cv::Mat outFeatures;
+    daisy->compute(cvImg, outFeatures);  // outFeatures are the descriptors
+
+    int itSize = outFeatures.cols;
+    outFtImg.allocate(w, h, itSize);
+    for (int i = 0; i < h; i++){
+        for (int j = 0; j < w; j++){
+            int idx = i*w + j;
+            for (int k = 0; k < itSize; k++){
+                outFtImg.pData[idx*itSize + k] = outFeatures.at<float>(idx, k) * 255;
+            }
+        }
+    }*/
+
+    // Old Function
     FImage imgray;
     img.desaturate(imgray);
 
@@ -447,6 +490,7 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1f, UCImage* im2f, i
 #else
     totalDiff = 0;
     for (int idx = 0; idx < ch; idx++){
+        //std::cout << idx << "\n";
         totalDiff += abs(p1[idx] - p2[idx]);
     }
 #endif
