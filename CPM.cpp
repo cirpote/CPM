@@ -214,7 +214,6 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
 
     int nLevels = _pyd1.nlevels();
 
-    std::exit(1);
     if (_im1_exg)
         delete[] _im1_exg;
     if (_im1_elev)
@@ -229,8 +228,8 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     _im2_exg = new UCImage[nLevels];
     _im2_elev = new UCImage[nLevels];
     for (int i = 0; i < nLevels; i++){
-        imDaisy(_pyd1[i], _im1_exg[i]);
-        imDaisy(_pyd2[i], _im2_exg[i]);
+        imDaisy(_pyd1[i], _im1_exg[i], _im1_elev[i]);
+        imDaisy(_pyd2[i], _im2_exg[i], _im2_elev[i]);
         // 		ImageFeature::imSIFT(_pyd1[i], _im1f[i], 2, 1, true, 8);
         // 		ImageFeature::imSIFT(_pyd2[i], _im2f[i], 2, 1, true, 8);
     }
@@ -349,39 +348,42 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     return validMatCnt;
 }
 
-void CPM::imDaisy(FImage& img, UCImage& outFtImg)
+void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
 {
     // New Function
-    /*int w = imgray.width();
-    int h = imgray.height();
+    int w = img.width();
+    int h = img.height();
     int channels = img.nchannels();
 
     // use the version in OpenCV
     cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
-    cv::Mat cvImg(h, w, CV_8UC2);
+    cv::Mat cvImg_Exg(h, w, CV_8UC1);
+    cv::Mat cvImg_Elev(h, w, CV_8UC1);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
-            for( int k = 0; k < channels; k++){
-                cvImg.at<cv::Vec2b>(i, j)[k] = imgray[i*w + j + k] * 255;
-            }
+                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels] * 255;
+                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1] * 255;
         }
     }
-    cv::Mat outFeatures;
-    daisy->compute(cvImg, outFeatures);  // outFeatures are the descriptors
+    cv::Mat outFeatures_Exg, outFeatures_Elev;
+    daisy->compute(cvImg_Exg, outFeatures_Exg);  // outFeatures are the descriptors
+    daisy->compute(cvImg_Elev, outFeatures_Elev);
 
-    int itSize = outFeatures.cols;
-    outFtImg.allocate(w, h, itSize);
+    int itSize = outFeatures_Exg.cols;
+    outFtImg_Exg.allocate(w, h, itSize);
+    outFtImg_Elev.allocate(w, h, itSize);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
             int idx = i*w + j;
             for (int k = 0; k < itSize; k++){
-                outFtImg.pData[idx*itSize + k] = outFeatures.at<float>(idx, k) * 255;
+                outFtImg_Exg.pData[idx*itSize + k] = outFeatures_Exg.at<float>(idx, k) * 255;
+                outFtImg_Elev.pData[idx*itSize + k] = outFeatures_Elev.at<float>(idx, k) * 255;
             }
         }
-    }*/
+    }
 
     // Old Function
-    FImage imgray;
+    /*FImage imgray;
     img.desaturate(imgray);
 
     int w = imgray.width();
@@ -407,7 +409,7 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg)
                 outFtImg.pData[idx*itSize + k] = outFeatures.at<float>(idx, k) * 255;
             }
         }
-    }
+    }*/
 }
 
 void CPM::CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, IntImage& kLabel2, int* valid, float th)
