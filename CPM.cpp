@@ -500,15 +500,16 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1f, UCImage* im2f, i
     return totalDiff;
 }
 
-int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1f, UCImage* pyd2f, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
+int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, UCImage* pyd1_elev, UCImage* pyd2_exg, UCImage* pyd2_elev, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
 {
     int nLevels = pyd1.nlevels();
     float ratio = pyd1.ratio();
 
     FImage im1 = pyd1[level];
     FImage im2 = pyd2[level];
-    UCImage* im1f = pyd1f + level;
-    UCImage* im2f = pyd2f + level;
+    UCImage* im1_exg = pyd1_exg + level;
+    UCImage* im2_exg = pyd2_exg + level;
+    // Creating im1_elev and im2_elev and pass them as parameters to MatchCost
     IntImage* seeds = pydSeeds + level;
     FImage* seedsFlow = pydSeedsFlow + level;
 
@@ -525,7 +526,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1f, UCI
         int y = seeds->pData[2 * i + 1];
         float u = seedsFlow->pData[2 * i];
         float v = seedsFlow->pData[2 * i + 1];
-        bestCosts[i] = MatchCost(im1, im2, im1f, im2f, x, y, x + u, y + v);
+        bestCosts[i] = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + u, y + v);
     }
 
     int iter = 0;
@@ -564,7 +565,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1f, UCI
                 if (abs(tu - cu) < 1e-6 && abs(tv - cv) < 1e-6){
                     continue;
                 }
-                float tc = MatchCost(im1, im2, im1f, im2f, x, y, x + tu, y + tv);
+                float tc = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + tu, y + tv);
                 if (tc < bestCosts[idx]){
                     bestCosts[idx] = tc;
                     seedsFlow->pData[2 * idx] = tu;
@@ -590,7 +591,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1f, UCI
                     continue;
                 }
 
-                float tc = MatchCost(im1, im2, im1f, im2f, x, y, x + tu, y + tv);
+                float tc = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + tu, y + tv);
                 if (tc < bestCosts[idx]){
                     bestCosts[idx] = tc;
                     seedsFlow->pData[2 * idx] = tu;
@@ -621,7 +622,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1f, UCI
     return iter;
 }
 
-void CPM::PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1f, UCImage* im2f, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow)
+void CPM::PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow)
 {
     int nLevels = pyd1.nlevels();
     float ratio = pyd1.ratio();
@@ -659,7 +660,7 @@ void CPM::PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage*
     }
 
     for (int l = nLevels - 1; l >= 0; l--){ // coarse-to-fine
-        int iCnt = Propogate(pyd1, pyd2, im1f, im2f, l, searchRadius, iterCnts[l], pydSeeds, neighbors, pydSeedsFlow, bestCosts);
+        int iCnt = Propogate(pyd1, pyd2, im1_exg, im1_elev, im2_exg, im2_elev, l, searchRadius, iterCnts[l], pydSeeds, neighbors, pydSeedsFlow, bestCosts);
         if (l > 0){
             UpdateSearchRadius(neighbors, pydSeedsFlow, l, searchRadius);
 
@@ -701,7 +702,7 @@ void CPM::OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UC
         }
     }
 
-    PyramidRandomSearch(pyd1, pyd2, im1_exg, im2_exg, pydSeeds, neighbors, pydSeedsFlow);
+    PyramidRandomSearch(pyd1, pyd2, im1_exg, im1_elev, im2_exg, im2_elev, pydSeeds, neighbors, pydSeedsFlow);
 
     // scale
     int b = _borderWidth;
