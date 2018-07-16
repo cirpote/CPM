@@ -298,9 +298,9 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     //t.toc("generate seeds: ");
 
     t.tic();
-    OnePass(_pyd1, _pyd2, _im1_exg, _im2_exg, _seeds, _neighbors, _pydSeedsFlow);
+    OnePass(_pyd1, _pyd2, _im1_exg, _im1_elev, _im2_exg, _im2_elev, _seeds, _neighbors, _pydSeedsFlow);
     t.toc("forward matching: ");
-    OnePass(_pyd2, _pyd1, _im2_exg, _im1_exg, _seeds2, _neighbors2, _pydSeedsFlow2);
+    OnePass(_pyd2, _pyd1, _im2_exg, _im2_elev, _im1_exg, _im1_elev, _seeds2, _neighbors2, _pydSeedsFlow2);
     t.toc("backward matching: ");
 
     // cross check
@@ -680,7 +680,7 @@ void CPM::PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage*
     delete[] iterCnts;
 }
 
-void CPM::OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1f, UCImage* im2f, IntImage& seeds, IntImage& neighbors, FImage* pydSeedsFlow)
+void CPM::OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, IntImage& seeds, IntImage& neighbors, FImage* pydSeedsFlow)
 {
     FImage rawImg1 = pyd1[0];
     FImage rawImg2 = pyd2[0];
@@ -701,7 +701,7 @@ void CPM::OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1f, UCIma
         }
     }
 
-    PyramidRandomSearch(pyd1, pyd2, im1f, im2f, pydSeeds, neighbors, pydSeedsFlow);
+    PyramidRandomSearch(pyd1, pyd2, im1_exg, im2_exg, pydSeeds, neighbors, pydSeedsFlow);
 
     // scale
     int b = _borderWidth;
