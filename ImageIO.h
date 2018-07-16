@@ -152,6 +152,9 @@ cv::Mat ImageIO::CvmatFromPixels(const T* pImagePlane, int width, int height, in
 	case 1:
 		im.create(height, width, CV_8UC1);
 		break;
+    case 2:
+        im.create(height, width, CV_8UC2);
+        break;
 	case 3:
 		im.create(height, width, CV_8UC3);
 		break;
@@ -234,7 +237,7 @@ void ImageIO::CvmatToPixels(const cv::Mat& cvInImg, T*& pOutImagePlane, int& wid
 {
 	if (cvInImg.data == NULL) // if allocation fails
 		return;
-	if (cvInImg.type() != CV_8UC1 && cvInImg.type() != CV_8UC3 && cvInImg.type() != CV_8UC4) // we only support three types of image information for now
+    if (cvInImg.type() != CV_8UC1 &&  cvInImg.type() != CV_8UC2 && cvInImg.type() != CV_8UC3 && cvInImg.type() != CV_8UC4) // we only support three types of image information for now
 		return;
 	width = cvInImg.size().width;
 	height = cvInImg.size().height;
