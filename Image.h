@@ -942,11 +942,11 @@ template <class T>
 bool Image<T>::imcopy(cv::Mat im)
 {
 	clear();
-        if(ImageIO::copyImage(im,pData,imWidth,imHeight,nChannels))
+    if(ImageIO::copyImage(im,pData,imWidth,imHeight,nChannels))
 	{
 		computeDimension();
-                std::cerr << "Width: " << imWidth << " Height: " << imHeight << " Channels: " << nChannels << "\n";
-                colorType = BGR;
+        std::cerr << "Width: " << imWidth << " Height: " << imHeight << " Channels: " << nChannels << "\n";
+        colorType = BGR;
 		return true;
 	}
 	return false;

@@ -361,10 +361,16 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
     cv::Mat cvImg_Elev(h, w, CV_8UC1);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
-                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels] * 255;
-                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1] * 255;
+                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels ] * 255;
+                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1 ] * 255;
         }
     }
+
+    cv::imshow("1", cvImg_Exg);
+    cv::imshow("2", cvImg_Elev);
+    cv::waitKey(0);
+    cv::destroyAllWindows();
+
     cv::Mat outFeatures_Exg, outFeatures_Elev;
     daisy->compute(cvImg_Exg, outFeatures_Exg);  // outFeatures are the descriptors
     daisy->compute(cvImg_Elev, outFeatures_Elev);
