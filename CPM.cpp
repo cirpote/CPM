@@ -448,12 +448,12 @@ void CPM::CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, Int
     }
 }
 
-float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1f, UCImage* im2f, int x1, int y1, int x2, int y2)
+float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, int x1, int y1, int x2, int y2)
 {
-    int w = im1f->width();
-    int h = im1f->height();
-    int ch = im1f->nchannels();
-    float totalDiff;
+    int w = im1_exg->width();
+    int h = im1_exg->height();
+    int ch = im1_exg->nchannels();
+    float totalDiffExg, totalDiffElev;
 
     // fast
     x1 = ImageProcessing::EnforceRange(x1, w);
@@ -461,10 +461,13 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1f, UCImage* im2f, i
     y1 = ImageProcessing::EnforceRange(y1, h);
     y2 = ImageProcessing::EnforceRange(y2, h);
 
-    unsigned char* p1 = im1f->pixPtr(y1, x1);
-    unsigned char* p2 = im2f->pixPtr(y2, x2);
+    unsigned char* p1 = im1_exg->pixPtr(y1, x1);
+    unsigned char* p2 = im2_exg->pixPtr(y2, x2);
+    unsigned char* p1e = im1_elev->pixPtr(y1, x1);
+    unsigned char* p2e = im2_elev->pixPtr(y2,x2);
 
-    totalDiff = 0;
+    totalDiffExg = 0;
+    totalDiffElev = 0;
 
 #ifdef WITH_SSE
     // SSE2
@@ -490,14 +493,15 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1f, UCImage* im2f, i
         totalDiff += abs(p1[idx] - p2[idx]);
     }
 #else
-    totalDiff = 0;
+    totalDiffExg = 0;
+    totalDiffElev = 0;
     for (int idx = 0; idx < ch; idx++){
-        //std::cout << idx << "\n";
-        totalDiff += abs(p1[idx] - p2[idx]);
+        totalDiffElev += abs(p1e[idx] - p2e[idx]);
+        totalDiffExg += abs(p1[idx] - p2[idx]);
     }
 #endif
 
-    return totalDiff;
+    return totalDiffExg + .2*totalDiffElev;
 }
 
 int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, UCImage* pyd1_elev, UCImage* pyd2_exg, UCImage* pyd2_elev, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
@@ -509,7 +513,8 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
     FImage im2 = pyd2[level];
     UCImage* im1_exg = pyd1_exg + level;
     UCImage* im2_exg = pyd2_exg + level;
-    // Creating im1_elev and im2_elev and pass them as parameters to MatchCost
+    UCImage* im1_elev = pyd1_elev + level;
+    UCImage* im2_elev = pyd2_elev + level;
     IntImage* seeds = pydSeeds + level;
     FImage* seedsFlow = pydSeedsFlow + level;
 
@@ -526,7 +531,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
         int y = seeds->pData[2 * i + 1];
         float u = seedsFlow->pData[2 * i];
         float v = seedsFlow->pData[2 * i + 1];
-        bestCosts[i] = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + u, y + v);
+        bestCosts[i] = MatchCost(im1, im2, im1_exg, im1_elev, im2_exg, im2_elev, x, y, x + u, y + v);
     }
 
     int iter = 0;
@@ -565,7 +570,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
                 if (abs(tu - cu) < 1e-6 && abs(tv - cv) < 1e-6){
                     continue;
                 }
-                float tc = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + tu, y + tv);
+                float tc = MatchCost(im1, im2, im1_exg, im1_elev, im2_exg, im2_elev, x, y, x + tu, y + tv);
                 if (tc < bestCosts[idx]){
                     bestCosts[idx] = tc;
                     seedsFlow->pData[2 * idx] = tu;
@@ -591,7 +596,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
                     continue;
                 }
 
-                float tc = MatchCost(im1, im2, im1_exg, im2_exg, x, y, x + tu, y + tv);
+                float tc = MatchCost(im1, im2, im1_exg, im1_elev, im2_exg, im2_elev, x, y, x + tu, y + tv);
                 if (tc < bestCosts[idx]){
                     bestCosts[idx] = tc;
                     seedsFlow->pData[2 * idx] = tu;
