@@ -365,6 +365,12 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
                 cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1] * 255;
         }
     }
+
+    cv::imshow("1", cvImg_Exg);
+    cv::imshow("2", cvImg_Elev);
+    cv::waitKey(0);
+    cv::destroyAllWindows();
+
     cv::Mat outFeatures_Exg, outFeatures_Elev;
     daisy->compute(cvImg_Exg, outFeatures_Exg);  // outFeatures are the descriptors
     daisy->compute(cvImg_Elev, outFeatures_Elev);
@@ -501,7 +507,7 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_
     }
 #endif
 
-    return totalDiffExg + .2*totalDiffElev;
+    return totalDiffExg + totalDiffElev;
 }
 
 int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, UCImage* pyd1_elev, UCImage* pyd2_exg, UCImage* pyd2_elev, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
