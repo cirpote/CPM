@@ -361,8 +361,8 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
     cv::Mat cvImg_Elev(h, w, CV_8UC1);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
-                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels] * 255;
-                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1] * 255;
+                cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels ] * 255;
+                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1 ] * 255;
         }
     }
 
