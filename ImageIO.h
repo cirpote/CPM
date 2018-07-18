@@ -65,7 +65,7 @@ public:
 	template <class T>
 	static cv::Mat CvmatFromPixels(const T* pImagePlane, int width, int height, int nchannels, ImageType imtype = standard);
 	template <class T>
-	static void CvmatToPixels(const cv::Mat& cvInImg, T*& pOutImagePlane, int& width, int& height, int& nchannels);
+    static void CvmatToPixels(cv::Mat& cvInImg, T*& pOutImagePlane, int& width, int& height, int& nchannels);
 private:
 };
 
@@ -233,7 +233,7 @@ cv::Mat ImageIO::CvmatFromPixels(const T* pImagePlane, int width, int height, in
 }
 
 template <class T>
-void ImageIO::CvmatToPixels(const cv::Mat& cvInImg, T*& pOutImagePlane, int& width, int& height, int& nchannels)
+void ImageIO::CvmatToPixels(cv::Mat& cvInImg, T*& pOutImagePlane, int& width, int& height, int& nchannels)
 {
 	if (cvInImg.data == NULL) // if allocation fails
 		return;
