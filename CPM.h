@@ -35,7 +35,7 @@ public:
 	CPM();
 	~CPM();
 
-    int Matching(FImage& img1, FImage& img2, FImage& outMatches);
+	int Matching(FImage& img1, FImage& img2, FImage& outMatches);
     void VotingSchemeHough(FImage& inpMatches, FImage& outMatches);
 	void VotingScheme(FImage& inpMatches, FImage& outMatches);
     void addFlowToAccumulator(const Eigen::Vector2f& pt, cv::Mat& acc);
@@ -77,9 +77,7 @@ private:
 	IntImage _kLabels, _kLabels2;
 
 	FImagePyramid _pyd1;
-    FImagePyramid _pyd1_bis;
 	FImagePyramid _pyd2;
-    FImagePyramid _pyd2_bis;
 
     UCImage* _im1_exg;
     UCImage* _im1_elev;
