@@ -28,6 +28,8 @@ corresponding to one match per line.
 
 #include "ImagePyramid.h"
 #include <eigen3/Eigen/Geometry>
+#include <pcl/point_types.h>
+#include <pcl/features/fpfh.h>
 
 class CPM
 {
@@ -35,7 +37,7 @@ public:
 	CPM();
 	~CPM();
 
-    int Matching(FImage& img1, FImage& img2, FImage& outMatches);
+    int Matching(FImage& img1, FImage &img1Cloud, FImage& img2, FImage &img2Cloud, FImage& outMatches);
     void VotingSchemeHough(FImage& inpMatches, FImage& outMatches);
 	void VotingScheme(FImage& inpMatches, FImage& outMatches);
     void addFlowToAccumulator(const Eigen::Vector2f& pt, cv::Mat& acc);
@@ -43,7 +45,7 @@ public:
 	void SetStep(int step);
 
 private:
-    void imDaisy(FImage& img, UCImage& outFtImg, UCImage& outFtImg_Elev);
+    void imDaisy(FImage& img, FImage &imgCloud, UCImage& outFtImg, UCImage& outFtImg_Elev);
 	void CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, IntImage& kLabel2, int* valid, float th);
     float MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_elev, UCImage *im2_exg, UCImage *im2_elev, int x1, int y1, int x2, int y2);
 
@@ -52,6 +54,9 @@ private:
     void PyramidRandomSearch(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UCImage* im1_elev, UCImage *im2_exg, UCImage *im2_elev, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow);
     void OnePass(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, IntImage& seeds, IntImage& neighbors, FImage* pydSeedsFlow);
 	void UpdateSearchRadius(IntImage& neighbors, FImage* pydSeedsFlow, int level, float* outRadius);
+
+    // Creating Pcl from cv::Mat
+    void CreateXYZCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const cv::Mat& orgCloud);
 
 	// minimum circle
 	struct Point{
@@ -77,9 +82,9 @@ private:
 	IntImage _kLabels, _kLabels2;
 
 	FImagePyramid _pyd1;
-    FImagePyramid _pyd1_bis;
+    FImagePyramid _pyd1_cloud;
 	FImagePyramid _pyd2;
-    FImagePyramid _pyd2_bis;
+    FImagePyramid _pyd2_cloud;
 
     UCImage* _im1_exg;
     UCImage* _im1_elev;

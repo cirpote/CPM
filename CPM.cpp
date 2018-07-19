@@ -202,15 +202,18 @@ void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches){
 }
 
 
-int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
+int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Cloud, FImage& outMatches)
 {
     CTimer t;
 
     int w = img1.width();
     int h = img1.height();
 
-    _pyd1.ConstructPyramid(img1, _pydRatio, 30);
-    _pyd2.ConstructPyramid(img2, _pydRatio, 30);
+    _pyd1.ConstructPyramid(img1, _pydRatio, 120);
+    _pyd2.ConstructPyramid(img2, _pydRatio, 120);
+
+    _pyd1_cloud.ConstructPyramid(img1Cloud, _pydRatio, 120);
+    _pyd2_cloud.ConstructPyramid(img2Cloud, _pydRatio, 120);
 
     int nLevels = _pyd1.nlevels();
 
@@ -227,9 +230,10 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     _im1_elev = new UCImage[nLevels];
     _im2_exg = new UCImage[nLevels];
     _im2_elev = new UCImage[nLevels];
+
     for (int i = 0; i < nLevels; i++){
-        imDaisy(_pyd1[i], _im1_exg[i], _im1_elev[i]);
-        imDaisy(_pyd2[i], _im2_exg[i], _im2_elev[i]);
+        imDaisy(_pyd1[i], _pyd1_cloud[i], _im1_exg[i], _im1_elev[i]);
+        imDaisy(_pyd2[i], _pyd2_cloud[i], _im2_exg[i], _im2_elev[i]);
         // 		ImageFeature::imSIFT(_pyd1[i], _im1f[i], 2, 1, true, 8);
         // 		ImageFeature::imSIFT(_pyd2[i], _im2f[i], 2, 1, true, 8);
     }
@@ -348,23 +352,44 @@ int CPM::Matching(FImage& img1, FImage& img2, FImage& outMatches)
     return validMatCnt;
 }
 
-void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
+void CPM::CreateXYZCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const cv::Mat &orgCloud){
+
+    for (int i = 0; i < orgCloud.size().height; i++)
+        for (int j = 0; j < orgCloud.size().width; j++)
+            cloud->points.push_back( pcl::PointXYZ( orgCloud.at<cv::Vec3f>(i,j)[0],
+                                                    orgCloud.at<cv::Vec3f>(i,j)[1],
+                                                    orgCloud.at<cv::Vec3f>(i,j)[2]) );
+
+
+}
+
+void CPM::imDaisy(FImage& img, FImage& imgCloud, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
 {
     // New Function
     int w = img.width();
     int h = img.height();
     int channels = img.nchannels();
+    int channels_cloud = imgCloud.nchannels();
 
     // use the version in OpenCV
     cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
     cv::Mat cvImg_Exg(h, w, CV_8UC1);
-    cv::Mat cvImg_Elev(h, w, CV_8UC1);
+    cv::Mat cvImg_Elev(h, w, CV_32FC3);
     for (int i = 0; i < h; i++){
         for (int j = 0; j < w; j++){
                 cvImg_Exg.at<unsigned char>(i, j) = img[ (i*w + j) * channels ] * 255;
-                cvImg_Elev.at<unsigned char>(i, j) = img[ (i*w + j) * channels + 1 ] * 255;
+                cvImg_Elev.at<cv::Vec3f>(i, j) = cv::Vec3f( imgCloud[ (i*w + j)*channels_cloud ],
+                                                            imgCloud[ (i*w + j)*channels_cloud + 1 ],
+                                                            imgCloud[ (i*w + j)*channels_cloud + 2 ]); //0;//img[ (i*w + j) * channels + 1 ] * 255;
         }
     }
+
+
+    // Creating the Cloud
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    CreateXYZCloud(cloud, cvImg_Elev);
+
+    std::cerr << cloud->points.size() << "\n";
 
     cv::imshow("1", cvImg_Exg);
     cv::imshow("2", cvImg_Elev);
@@ -383,7 +408,7 @@ void CPM::imDaisy(FImage& img, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
             int idx = i*w + j;
             for (int k = 0; k < itSize; k++){
                 outFtImg_Exg.pData[idx*itSize + k] = outFeatures_Exg.at<float>(idx, k) * 255;
-                outFtImg_Elev.pData[idx*itSize + k] = outFeatures_Elev.at<float>(idx, k) * 255;
+                outFtImg_Elev.pData[idx*itSize + k] = 0; //outFeatures_Elev.at<float>(idx, k) * 255;
             }
         }
     }
