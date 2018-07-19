@@ -27,9 +27,11 @@ corresponding to one match per line.
 #define _CPM_H_
 
 #include "ImagePyramid.h"
+#include <unordered_map>
 #include <eigen3/Eigen/Geometry>
 #include <pcl/point_types.h>
 #include <pcl/features/fpfh.h>
+#include <pcl/features/normal_3d.h>
 
 class CPM
 {
@@ -45,7 +47,7 @@ public:
 	void SetStep(int step);
 
 private:
-    void imDaisy(FImage& img, FImage &imgCloud, UCImage& outFtImg, UCImage& outFtImg_Elev);
+    void imDaisy(FImage& img, FImage &imgCloud, const float &cloud_ratio, UCImage& outFtImg, UCImage& outFtImg_Elev);
 	void CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, IntImage& kLabel2, int* valid, float th);
     float MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_elev, UCImage *im2_exg, UCImage *im2_elev, int x1, int y1, int x2, int y2);
 
@@ -56,7 +58,8 @@ private:
 	void UpdateSearchRadius(IntImage& neighbors, FImage* pydSeedsFlow, int level, float* outRadius);
 
     // Creating Pcl from cv::Mat
-    void CreateXYZCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const cv::Mat& orgCloud);
+    void CreateXYZCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, const cv::Mat& orgCloud, cv::Mat& indexes);
+    void NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::Ptr& normals, pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh, const float& ratio);
 
 	// minimum circle
 	struct Point{
