@@ -86,7 +86,7 @@ void CPM::VotingSchemeHough(FImage& inpMatches, FImage& outMatches){
 
     std::vector<int> refFlows;
     for( unsigned int i = 1; i < len; ++i ) {
-        if( (flows[i] - max_pt).norm() < 20.f )
+        if( (flows[i] - max_pt).norm() < 10.f )
             refFlows.push_back( i );
     }
 
@@ -209,11 +209,11 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
     int w = img1.width();
     int h = img1.height();
 
-    _pyd1.ConstructPyramid(img1, _pydRatio, 120);
-    _pyd2.ConstructPyramid(img2, _pydRatio, 120);
+    _pyd1.ConstructPyramid(img1, _pydRatio, 30);
+    _pyd2.ConstructPyramid(img2, _pydRatio, 30);
 
-    _pyd1_cloud.ConstructPyramid(img1Cloud, _pydRatio, 120);
-    _pyd2_cloud.ConstructPyramid(img2Cloud, _pydRatio, 120);
+    _pyd1_cloud.ConstructPyramid(img1Cloud, _pydRatio, 30);
+    _pyd2_cloud.ConstructPyramid(img2Cloud, _pydRatio, 30);
 
     int nLevels = _pyd1.nlevels();
 
