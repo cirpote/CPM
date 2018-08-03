@@ -945,7 +945,7 @@ bool Image<T>::imcopy(cv::Mat im)
     if(ImageIO::copyImage(im,pData,imWidth,imHeight,nChannels))
 	{
 		computeDimension();
-        std::cerr << "Width: " << imWidth << " Height: " << imHeight << " Channels: " << nChannels << "\n";
+        //std::cerr << "Width: " << imWidth << " Height: " << imHeight << " Channels: " << nChannels << "\n";
         colorType = BGR;
 		return true;
 	}

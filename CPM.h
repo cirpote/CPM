@@ -39,9 +39,10 @@ public:
 	CPM();
 	~CPM();
 
+    void Match2Flow(FImage& inMat, FImage& ou, FImage& ov, int w, int h);
     int Matching(FImage& img1, FImage &img1Cloud, FImage& img2, FImage &img2Cloud, FImage& outMatches);
-    void VotingSchemeHough(FImage& inpMatches, FImage& outMatches);
-	void VotingScheme(FImage& inpMatches, FImage& outMatches);
+    void VotingSchemeHough(FImage& inpMatches, FImage& outMatches, const cv::Mat &rgb);
+    void VotingScheme(FImage& inpMatches, FImage& outMatches, const cv::Mat &rgb, const cv::Mat &rgb2);
     void addFlowToAccumulator(const Eigen::Vector2f& pt, cv::Mat& acc);
 	void SetStereoFlag(int needStereo);
 	void SetStep(int step);

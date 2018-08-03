@@ -13,7 +13,7 @@ CPM::CPM()
     _step = 3;
     _isStereo = false;
 
-    _maxIters = 8;
+    _maxIters = 20;
     _stopIterRatio = 0.05;
     _pydRatio = 0.5;
 
@@ -45,6 +45,35 @@ CPM::~CPM()
         delete[] _pydSeedsFlow2;
 }
 
+// draw each match as a 3x3 color block
+void CPM::Match2Flow(FImage& inMat, FImage& ou, FImage& ov, int w, int h)
+{
+    if (!ou.matchDimension(w, h, 1)){
+        ou.allocate(w, h, 1);
+    }
+    if (!ov.matchDimension(w, h, 1)){
+        ov.allocate(w, h, 1);
+    }
+    ou.setValue(UNKNOWN_FLOW);
+    ov.setValue(UNKNOWN_FLOW);
+    int cnt = inMat.height();
+    for (int i = 0; i < cnt; i++){
+        float* p = inMat.rowPtr(i);
+        float x = p[0];
+        float y = p[1];
+        float u = p[2] - p[0];
+        float v = p[3] - p[1];
+        for (int di = -1; di <= 1; di++){
+            for (int dj = -1; dj <= 1; dj++){
+                int tx = ImageProcessing::EnforceRange(x + dj, w);
+                int ty = ImageProcessing::EnforceRange(y + di, h);
+                ou[ty*w + tx] = u;
+                ov[ty*w + tx] = v;
+            }
+        }
+    }
+}
+
 void CPM::SetStereoFlag(int needStereo)
 {
     _isStereo = needStereo;
@@ -55,19 +84,27 @@ void CPM::SetStep(int step)
     _step = step;
 }
 
-void CPM::VotingSchemeHough(FImage& inpMatches, FImage& outMatches){
+void CPM::VotingSchemeHough(FImage& inpMatches, FImage& outMatches, const cv::Mat& rgb){
 
-    cv::Mat votingAccumulator( cv::Size(500,500), CV_32FC1, cv::Scalar(0) );
+    cv::Mat votingAccumulator( cv::Size(600,600), CV_32FC1, cv::Scalar(0) ); // 500, 500)
 
     int len = inpMatches.height();
-    std::vector<Eigen::Vector2f> flows (len, Eigen::Vector2f(0,0));
-    for(unsigned int i = 0; i < len; ++i)
-        flows[i] = Eigen::Vector2f( inpMatches[4 * i + 2]-inpMatches[4 * i + 0] + votingAccumulator.cols/2,
-                                inpMatches[4 * i + 3]-inpMatches[4 * i + 1] + votingAccumulator.rows/2);
+    std::vector<Eigen::Vector2f> flows;
+    for(unsigned int i = 0; i < len; ++i){
+        /*v::Vec3b color = rgb.at<cv::Vec3b>(inpMatches[4*i + 2], inpMatches[4*i + 3]);
+            if( (color[0] + color[1] + color[2]) < 3 )
+                continue;*/
+        flows.push_back( Eigen::Vector2f( inpMatches[4 * i + 2]-inpMatches[4 * i + 0] + votingAccumulator.cols/2,
+                         inpMatches[4 * i + 3]-inpMatches[4 * i + 1] + votingAccumulator.rows/2) );
 
-    for(unsigned int i = 0; i < len; ++i)
-        addFlowToAccumulator(flows[i], votingAccumulator);
+    }
 
+    //len = flows.size();
+
+    for(unsigned int i = 0; i < len; ++i){
+            if(flows[i].norm()<450) // 450
+                addFlowToAccumulator(flows[i], votingAccumulator);
+    }
 
     Eigen::Vector2f max_pt(0,0);
     float max_value = -1;
@@ -86,7 +123,7 @@ void CPM::VotingSchemeHough(FImage& inpMatches, FImage& outMatches){
 
     std::vector<int> refFlows;
     for( unsigned int i = 1; i < len; ++i ) {
-        if( (flows[i] - max_pt).norm() < 10.f )
+        if( (flows[i] - max_pt).norm() < 20.f )
             refFlows.push_back( i );
     }
 
@@ -142,16 +179,27 @@ void CPM::addFlowToAccumulator(const Eigen::Vector2f &pt, cv::Mat &acc){
 
 }
 
-void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches){
+void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches, const cv::Mat& rgb1, const cv::Mat& rgb2){
+
+
+    std::vector< Eigen::Vector4f > inpMatchesFilt;
+    for(unsigned int it = 0; it < inpMatches.height(); ++it){
+        cv::Vec3b pt1 = rgb1.at<cv::Vec3b>(inpMatches[4*it+1], inpMatches[4*it]);
+        cv::Vec3b pt2 = rgb2.at<cv::Vec3b>(inpMatches[4*it+3], inpMatches[4*it+2]);
+        if( pt1[0] > 5 && pt1[1] > 5 && pt1[2] > 1 && pt2[0] > 5 && pt2[1] > 5 && pt2[2] > 5 ){
+            //std::cout << pt1 << " " << pt2 << std::endl;
+            inpMatchesFilt.push_back( Eigen::Vector4f( inpMatches[4*it], inpMatches[4*it+1], inpMatches[4*it+2], inpMatches[4*it+3]  ) );
+        }
+    }
 
     std::vector< Eigen::Vector3f > voting_vector;
-    voting_vector.push_back( Eigen::Vector3f(inpMatches[2]-inpMatches[0], inpMatches[3]-inpMatches[1], 1) );
+    voting_vector.push_back( Eigen::Vector3f(inpMatchesFilt[0](2)-inpMatchesFilt[0](0), inpMatchesFilt[0](3)-inpMatchesFilt[0](1), 1) );
 
-    int len = inpMatches.height();
+    int len = inpMatchesFilt.size();
     for( unsigned int i = 1; i < len; ++i ) {
 
-        Eigen::Vector2f currFlow( inpMatches[4 * i + 2]-inpMatches[4 * i + 0],
-                inpMatches[4 * i + 3]-inpMatches[4 * i + 1] );
+        Eigen::Vector2f currFlow( inpMatchesFilt[i](2)-inpMatchesFilt[i](0),
+                inpMatchesFilt[i](3)-inpMatchesFilt[i](1) );
         int voting_size = voting_vector.size(); int count = 0;
         while(true){
 
@@ -178,8 +226,8 @@ void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches){
 
     bool _isValid[len]; int counter = 0;
     for( unsigned int i = 1; i < len; ++i ) {
-        Eigen::Vector2f currFlow(inpMatches[4 * i + 2]-inpMatches[4 * i + 0],
-                inpMatches[4 * i + 3]-inpMatches[4 * i + 1]);
+        Eigen::Vector2f currFlow(inpMatchesFilt[i](2)-inpMatchesFilt[i](0),
+                                 inpMatchesFilt[i](3)-inpMatchesFilt[i](1));
         if( ( currFlow - voting_vector[max_index].head(2) ).norm() < 20.f){
             _isValid[i] = true;
             counter++;
@@ -191,10 +239,10 @@ void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches){
     outMatches = FImage(4, counter, 1); int inner_counter = 0;
     for( unsigned int i = 1; i < len; ++i ) {
         if(_isValid[i]){
-            outMatches[inner_counter*4 + 0] = inpMatches[i*4 + 0];
-            outMatches[inner_counter*4 + 1] = inpMatches[i*4 + 1];
-            outMatches[inner_counter*4 + 2] = inpMatches[i*4 + 2];
-            outMatches[inner_counter*4 + 3] = inpMatches[i*4 + 3];
+            outMatches[inner_counter*4 + 0] = inpMatchesFilt[i](0);
+            outMatches[inner_counter*4 + 1] = inpMatchesFilt[i](1);
+            outMatches[inner_counter*4 + 2] = inpMatchesFilt[i](2);
+            outMatches[inner_counter*4 + 3] = inpMatchesFilt[i](3);
             inner_counter++;
         }
     }
@@ -415,21 +463,6 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         }
     }
 
-    // Creating the Cloud
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
-    cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
-    CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
-    NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
-
-    std::cerr << cloud->points.size() << " " << cloud_normals->points.size() << " " << fpfh->points.size() << "\n";
-
-    /*cv::imshow("1", cvImg_Exg);
-    cv::imshow("2", cvImg_Elev);
-    cv::waitKey(0);
-    cv::destroyAllWindows();*/
-
     cv::Mat outFeatures_Exg;
     daisy->compute(cvImg_Exg, outFeatures_Exg);
 
@@ -443,6 +476,14 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
             }
         }
     }
+
+    // Creating the Cloud
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
+    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
+    cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
+    CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
+    NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
 
     // Normalizing FPFH descriptor
     int fpfhSize = 33;
@@ -562,7 +603,7 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_
         totalDiffElev += abs(p1e[idx] - p2e[idx]);
 #endif
 
-    return totalDiffExg + totalDiffElev;
+    return totalDiffExg + .5*totalDiffElev;
 }
 
 int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, UCImage* pyd1_elev, UCImage* pyd2_exg, UCImage* pyd2_elev, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
@@ -833,7 +874,7 @@ CPM::Point CPM::circumcenter(Point a, Point b, Point c)
     Point ua, ub, va, vb;
     ua.x = (a.x + b.x) / 2;
     ua.y = (a.y + b.y) / 2;
-    ub.x = ua.x - a.y + b.y;//���� ��ֱ�жϣ����߶ε��Ϊ0
+    ub.x = ua.x - a.y + b.y;
     ub.y = ua.y + a.x - b.x;
     va.x = (a.x + c.x) / 2;
     va.y = (a.y + c.y) / 2;
@@ -860,14 +901,14 @@ float CPM::MinimalCircle(float* x, float*y, int n, float* centerX, float* center
     int i, j, k;
     o = p[0];
     r = 0;
-    for (i = 1; i < n; i++)//׼������ĵ�
+    for (i = 1; i < n; i++)
     {
-        if (dist(p[i], o) - r > eps)//�����i���� i-1ǰ��СԲ����
+        if (dist(p[i], o) - r > eps)
         {
-            o = p[i];//��Բ��
-            r = 0;//���뾶
+            o = p[i];
+            r = 0;
 
-            for (j = 0; j < i; j++)//ѭ����ȷ���뾶
+            for (j = 0; j < i; j++)
             {
                 if (dist(p[j], o) - r > eps)
                 {
@@ -878,12 +919,12 @@ float CPM::MinimalCircle(float* x, float*y, int n, float* centerX, float* center
 
                     for (k = 0; k < j; k++)
                     {
-                        if (dist(o, p[k]) - r > eps)//���jǰ���е㲻���� i��jȷ����Բ�������
+                        if (dist(o, p[k]) - r > eps)
                         {
                             o = circumcenter(p[i], p[j], p[k]);
                             r = dist(o, p[k]);
                         }
-                    }//ѭ��������3�㣬��Ϊһ��Բ���3�������ȷ��
+                    }
                 }
             }
         }
