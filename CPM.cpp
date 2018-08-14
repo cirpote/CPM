@@ -281,7 +281,7 @@ int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Clo
 
     float cloud_ratio = 0.f;
     for (int i = 0; i < nLevels; i++){
-        cloud_ratio = i * 2;
+        cloud_ratio = i * (1/_pydRatio);
         imDaisy(_pyd1[i], _pyd1_cloud[i], cloud_ratio, _im1_exg[i], _im1_elev[i]);
         imDaisy(_pyd2[i], _pyd2_cloud[i], cloud_ratio, _im2_exg[i], _im2_elev[i]);
         // 		ImageFeature::imSIFT(_pyd1[i], _im1f[i], 2, 1, true, 8);
@@ -426,11 +426,13 @@ void CPM::NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pc
     NormalEstimator.setInputCloud (cloud);
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ> ());
     NormalEstimator.setSearchMethod (tree);
-    NormalEstimator.setRadiusSearch(0.1);
+    NormalEstimator.setRadiusSearch(0.15);
     NormalEstimator.compute(*normals);
 
     // Create the FPFH estimation class, and pass the input dataset+normals to it
-    pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
+    pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
+    fpfhEst.setNumberOfThreads(12);
+    //pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfhEst;
     fpfhEst.setInputCloud (cloud);
     fpfhEst.setInputNormals (normals);
     fpfhEst.setSearchMethod(tree);
@@ -490,12 +492,16 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
     outFtImg_Elev.allocate(w, h, fpfhSize);
     for (int i = 0; i < fpfh->size(); i++){
             float normalizer = 0.f;
-            for (int k = 0; k < fpfhSize; k++)
+            for (int k = 0; k < fpfhSize; k++){
                 normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
+            }
             normalizer = sqrt(normalizer);
-            for (int k = 0; k < fpfhSize; k++)
+            for (int k = 0; k < fpfhSize; k++){
                 fpfh->points[i].histogram[k] /= normalizer;
+            }
     }
+
+
 
     int counter = 0;
     for (int i = 0; i < h; i++){
@@ -683,7 +689,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
 
             // Random search: Improve current guess by searching in boxes
             // of exponentially decreasing size around the current best guess.
-            for (int mag = radius[idx] + 0.5; mag >= 1; mag /= 2) {
+            for (int mag = radius[idx] + 0.5; mag >= 1; mag /= 1.25) {   // README: mag /= 2
                 /* Sampling window */
                 float tu = seedsFlow->pData[2 * idx] + rand() % (2 * mag + 1) - mag;
 
@@ -717,7 +723,7 @@ int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, 
 
         float updateRatio = float(updateCount) / ptNum;
         //printf("Update ratio: %f\n", updateRatio);
-        if (updateRatio < _stopIterRatio || lastUpdateRatio - updateRatio < 0.01){
+        if (updateRatio < _stopIterRatio || lastUpdateRatio - updateRatio < 0.001){
             iter++;
             break;
         }

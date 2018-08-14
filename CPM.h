@@ -32,6 +32,7 @@ corresponding to one match per line.
 #include <pcl/point_types.h>
 #include <pcl/features/fpfh.h>
 #include <pcl/features/normal_3d.h>
+#include <pcl/features/fpfh_omp.h>
 
 class CPM
 {

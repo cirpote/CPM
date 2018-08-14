@@ -12,9 +12,7 @@
 #define _abs(x) (x>=0)?x:-x
 #endif
 
-#ifndef PI
-#define PI 3.1415927
-#endif
+//const float PI_ = 3.1415927;
 
 enum SortType{SortAscending,SortDescending};
 
