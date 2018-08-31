@@ -47,6 +47,8 @@ public:
     void addFlowToAccumulator(const Eigen::Vector2f& pt, cv::Mat& acc);
 	void SetStereoFlag(int needStereo);
 	void SetStep(int step);
+    void SetParams(int step, bool useVisualFeatures, bool useGeometricFeatures);
+
 
 private:
     void imDaisy(FImage& img, FImage &imgCloud, const float &cloud_ratio, UCImage& outFtImg, UCImage& outFtImg_Elev);
@@ -74,6 +76,8 @@ private:
 	float MinimalCircle(float* x, float*y, int n, float* centerX = NULL, float* centerY = NULL);
 
 	//
+    bool _useVisFeats;
+    bool _useGeomFeats;
 	int _step;
 	int _maxIters;
 	float _stopIterRatio;

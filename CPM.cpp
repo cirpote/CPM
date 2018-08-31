@@ -84,6 +84,18 @@ void CPM::SetStep(int step)
     _step = step;
 }
 
+void CPM::SetParams(int step, bool useVisualFeatures, bool useGeometricFeatures)
+{
+    _useVisFeats = useVisualFeatures;
+    _useGeomFeats = useGeometricFeatures;
+    _step = step;
+
+    if( !_useVisFeats && !_useGeomFeats){
+        std::cerr << "no type of feature has been set";
+        std::exit(1);
+    }
+}
+
 void CPM::VotingSchemeHough(FImage& inpMatches, FImage& outMatches, const cv::Mat& rgb){
 
     cv::Mat votingAccumulator( cv::Size(600,600), CV_32FC1, cv::Scalar(0) ); // 500, 500)
@@ -252,16 +264,22 @@ void CPM::VotingScheme(FImage& inpMatches, FImage& outMatches, const cv::Mat& rg
 
 int CPM::Matching(FImage& img1, FImage& img1Cloud, FImage& img2, FImage& img2Cloud, FImage& outMatches)
 {
+
+    if( !_useVisFeats && !_useGeomFeats){
+        std::cerr << "no type of feature has been set";
+        std::exit(1);
+    }
+
     CTimer t;
 
     int w = img1.width();
     int h = img1.height();
 
-    _pyd1.ConstructPyramid(img1, _pydRatio, 30);
-    _pyd2.ConstructPyramid(img2, _pydRatio, 30);
+    _pyd1.ConstructPyramid(img1, _pydRatio, 60);
+    _pyd2.ConstructPyramid(img2, _pydRatio, 60);
 
-    _pyd1_cloud.ConstructPyramid(img1Cloud, _pydRatio, 30);
-    _pyd2_cloud.ConstructPyramid(img2Cloud, _pydRatio, 30);
+    _pyd1_cloud.ConstructPyramid(img1Cloud, _pydRatio, 60);
+    _pyd2_cloud.ConstructPyramid(img2Cloud, _pydRatio, 60);
 
     int nLevels = _pyd1.nlevels();
 
@@ -448,14 +466,12 @@ void CPM::NormalsAndFPFHEstimation(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pc
 
 void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCImage& outFtImg_Exg, UCImage& outFtImg_Elev)
 {
-    // New Function
+
     int w = img.width();
     int h = img.height();
     int channels = img.nchannels();
     int channels_cloud = imgCloud.nchannels();
 
-    // use the version in OpenCV
-    cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
     cv::Mat cvImg_Exg(h, w, CV_8UC1);
     cv::Mat cvImg_Elev(h, w, CV_32FC3);
     for (int i = 0; i < h; i++){
@@ -465,55 +481,62 @@ void CPM::imDaisy(FImage& img, FImage& imgCloud, const float& cloud_ratio, UCIma
         }
     }
 
-    cv::Mat outFeatures_Exg;
-    daisy->compute(cvImg_Exg, outFeatures_Exg);
+    outFtImg_Exg.allocate(w, h, 104);
+    outFtImg_Elev.allocate(w, h, 33);
 
-    int itSize = outFeatures_Exg.cols;
-    outFtImg_Exg.allocate(w, h, itSize);
-    for (int i = 0; i < h; i++){
-        for (int j = 0; j < w; j++){
-            int idx = i*w + j;
-            for (int k = 0; k < itSize; k++){
-                outFtImg_Exg.pData[idx*itSize + k] = outFeatures_Exg.at<float>(idx, k) * 255;
+    if( _useVisFeats ){
+        cv::Ptr<cv::xfeatures2d::DAISY> daisy =	cv::xfeatures2d::DAISY::create(5, 3, 4, 8, cv::xfeatures2d::DAISY::NRM_FULL, cv::noArray(), false, false);
+        cv::Mat outFeatures_Exg;
+        daisy->compute(cvImg_Exg, outFeatures_Exg);
+
+        int itSize = outFeatures_Exg.cols;
+        //outFtImg_Exg.allocate(w, h, itSize);
+        for (int i = 0; i < h; i++){
+            for (int j = 0; j < w; j++){
+                int idx = i*w + j;
+                for (int k = 0; k < itSize; k++){
+                    outFtImg_Exg.pData[idx*itSize + k] = outFeatures_Exg.at<float>(idx, k) * 255;
+                }
             }
         }
     }
 
-    // Creating the Cloud
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
-    cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
-    CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
-    NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
+    if( _useGeomFeats ) {
+        // Creating the Cloud
+        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+        pcl::PointCloud<pcl::Normal>::Ptr cloud_normals (new pcl::PointCloud<pcl::Normal>);
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfh (new pcl::PointCloud<pcl::FPFHSignature33> ());
+        cv::Mat cloudIndexes(h, w, CV_8UC1, cv::Scalar(0));
+        CreateXYZCloud(cloud, cvImg_Elev, cloudIndexes);
+        NormalsAndFPFHEstimation(cloud, cloud_normals, fpfh, cloud_ratio);
 
-    // Normalizing FPFH descriptor
-    int fpfhSize = 33;
-    outFtImg_Elev.allocate(w, h, fpfhSize);
-    for (int i = 0; i < fpfh->size(); i++){
-            float normalizer = 0.f;
-            for (int k = 0; k < fpfhSize; k++){
-                normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
-            }
-            normalizer = sqrt(normalizer);
-            for (int k = 0; k < fpfhSize; k++){
-                fpfh->points[i].histogram[k] /= normalizer;
-            }
-    }
+        // Normalizing FPFH descriptor
+        int fpfhSize = 33;
+        for (int i = 0; i < fpfh->size(); i++){
+                float normalizer = 0.f;
+                for (int k = 0; k < fpfhSize; k++){
+                    normalizer +=  fpfh->points[i].histogram[k]*fpfh->points[i].histogram[k];
+                }
+                normalizer = sqrt(normalizer);
+                for (int k = 0; k < fpfhSize; k++){
+                    fpfh->points[i].histogram[k] /= normalizer;
+                }
+        }
 
 
 
-    int counter = 0;
-    for (int i = 0; i < h; i++){
-        for (int j = 0; j < w; j++){
-            int idx = i*w + j;
-            if( cloudIndexes.at<unsigned char>(i, j) == 1 ){
-                for (int k = 0; k < fpfhSize; k++)
-                    outFtImg_Elev.pData[idx*fpfhSize + k] = (unsigned char)round(fpfh->points[counter].histogram[k]*255);
-                counter++;
-            } else if( cloudIndexes.at<unsigned char>(i, j) == 0 ) {
-                for (int k = 0; k < fpfhSize; k++)
-                    outFtImg_Elev.pData[idx*fpfhSize + k] = 0;
+        int counter = 0;
+        for (int i = 0; i < h; i++){
+            for (int j = 0; j < w; j++){
+                int idx = i*w + j;
+                if( cloudIndexes.at<unsigned char>(i, j) == 1 ){
+                    for (int k = 0; k < fpfhSize; k++)
+                        outFtImg_Elev.pData[idx*fpfhSize + k] = (unsigned char)round(fpfh->points[counter].histogram[k]*255);
+                    counter++;
+                } else if( cloudIndexes.at<unsigned char>(i, j) == 0 ) {
+                    for (int k = 0; k < fpfhSize; k++)
+                        outFtImg_Elev.pData[idx*fpfhSize + k] = 0;
+                }
             }
         }
     }
@@ -557,6 +580,7 @@ void CPM::CrossCheck(IntImage& seeds, FImage& seedsFlow, FImage& seedsFlow2, Int
 
 float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_elev, UCImage* im2_exg, UCImage* im2_elev, int x1, int y1, int x2, int y2)
 {
+    //std::cerr << "inizio";
     int w = im1_exg->width();
     int h = im1_exg->height();
     int ch = im1_exg->nchannels();
@@ -569,13 +593,20 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_
     y1 = ImageProcessing::EnforceRange(y1, h);
     y2 = ImageProcessing::EnforceRange(y2, h);
 
-    unsigned char* p1 = im1_exg->pixPtr(y1, x1);
-    unsigned char* p2 = im2_exg->pixPtr(y2, x2);
-    unsigned char* p1e = im1_elev->pixPtr(y1, x1);
-    unsigned char* p2e = im2_elev->pixPtr(y2,x2);
+    unsigned char* p1;
+    unsigned char* p2;
+    unsigned char* p1e;
+    unsigned char* p2e;
+
+    p1 = im1_exg->pixPtr(y1, x1);
+    p2 = im2_exg->pixPtr(y2, x2);
+    p1e = im1_elev->pixPtr(y1, x1);
+    p2e = im2_elev->pixPtr(y2,x2);
 
     totalDiffExg = 0;
     totalDiffElev = 0;
+
+
 
 #ifdef WITH_SSE
     // SSE2
@@ -601,15 +632,19 @@ float CPM::MatchCost(FImage& img1, FImage& img2, UCImage* im1_exg, UCImage* im1_
         totalDiff += abs(p1[idx] - p2[idx]);
     }
 #else
-    totalDiffExg = 0;
-    totalDiffElev = 0;
-    for (int idx = 0; idx < ch; idx++)
-        totalDiffExg += abs(p1[idx] - p2[idx]);
-    for (int idx = 0; idx < chCloud; idx++)
-        totalDiffElev += abs(p1e[idx] - p2e[idx]);
-#endif
 
+        //std::cerr << "totalDiffExg";
+        for (int idx = 0; idx < ch; idx++)
+            totalDiffExg += abs(p1[idx] - p2[idx]);
+
+        //std::cerr << "totalDiffElev";
+        for (int idx = 0; idx < chCloud; idx++)
+            totalDiffElev += abs(p1e[idx] - p2e[idx]);
+
+#endif
+    //std::cerr << _useVisFeats << _useGeomFeats << "fine \n";
     return totalDiffExg + .5*totalDiffElev;
+
 }
 
 int CPM::Propogate(FImagePyramid& pyd1, FImagePyramid& pyd2, UCImage* pyd1_exg, UCImage* pyd1_elev, UCImage* pyd2_exg, UCImage* pyd2_elev, int level, float* radius, int iterCnt, IntImage* pydSeeds, IntImage& neighbors, FImage* pydSeedsFlow, float* bestCosts)
